@@ -1,67 +1,101 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: apache-deploy
-  labels:
-    app: apache
-spec:
-  replicas: 2   # HPA will control this
-  selector:
-    matchLabels:
-      app: apache
-  template:
-    metadata:
-      labels:
-        app: apache
-    spec:
-      containers:
-      - name: apache
-        image: httpd:2.4
-        ports:
-        - containerPort: 80
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-          limits:
-            cpu: "500m"
-            memory: "256Mi"
- 
----
-# -----------------------------
-# Apache Service (LoadBalancer)
-# -----------------------------
+# --------------------------------
+
+# PersistentVolume
+
+# --------------------------------
+
 apiVersion: v1
-kind: Service
+
+kind: PersistentVolume
+
 metadata:
-  name: apache-service
+
+  name: demo-pv
+
 spec:
-  type: LoadBalancer
-  selector:
-    app: apache
-  ports:
-  - port: 80
-    targetPort: 80
+
+  capacity:
+
+    storage: 1Gi
+
+  accessModes:
+
+    - ReadWriteOnce
+
+  persistentVolumeReclaimPolicy: Retain
+
+  hostPath:
+
+    path: /mnt/data
  
 ---
-# -----------------------------
-# Horizontal Pod Autoscaler
-# -----------------------------
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
+
+# --------------------------------
+
+# PersistentVolumeClaim
+
+# --------------------------------
+
+apiVersion: v1
+
+kind: PersistentVolumeClaim
+
 metadata:
-  name: apache-hpa
+
+  name: demo-pvc
+
 spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: apache-deploy
-  minReplicas: 2
-  maxReplicas: 6
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 50
+
+  accessModes:
+
+    - ReadWriteOnce
+
+  resources:
+
+    requests:
+
+      storage: 500Mi
+ 
+---
+
+# --------------------------------
+
+# Pod using PVC
+
+# --------------------------------
+
+apiVersion: v1
+
+kind: Pod
+
+metadata:
+
+  name: demo-pod
+
+spec:
+
+  containers:
+
+  - name: nginx
+
+    image: nginx
+
+    ports:
+
+    - containerPort: 80
+
+    volumeMounts:
+
+    - name: storage
+
+      mountPath: /usr/share/nginx/html
+
+  volumes:
+
+  - name: storage
+
+    persistentVolumeClaim:
+
+      claimName: demo-pvc
+
+ 
